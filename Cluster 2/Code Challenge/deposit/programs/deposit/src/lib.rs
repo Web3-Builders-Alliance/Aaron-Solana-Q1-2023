@@ -19,8 +19,8 @@ pub mod deposit {
 
         let deposit_account = &mut ctx.accounts.vault;
         let owner_main_account = &mut ctx.accounts.owner;
-
-        require!(**owner_main_account.try_borrow_lamports()? >= deposit_amount, DepositError::InsufficientFunds);
+        require_keys_eq!(owner_main_account.key(),deposit_account.owner,BankError::Unauthorized);
+        require!(**owner_main_account.try_borrow_lamports()? >= deposit_amount, BankError::InsufficientFunds);
     
         let ix = anchor_lang::solana_program::system_instruction::transfer(
             &owner_main_account.key(),
@@ -43,7 +43,8 @@ pub mod deposit {
     pub fn withdraw(ctx: Context<Withdraw>, withdraw_amount: u64) -> Result<()> {
         let receiver = &mut ctx.accounts.owner;
         let vault = &mut ctx.accounts.vault;
-        require!(withdraw_amount <= vault.balance, DepositError::InsufficientFunds);
+        require_keys_eq!(receiver.key(),vault.owner,BankError::Unauthorized);
+        require!(withdraw_amount <= vault.balance, BankError::InsufficientFunds);
 
         **vault.to_account_info().try_borrow_mut_lamports()? -= withdraw_amount;
         **receiver.try_borrow_mut_lamports()? += withdraw_amount;
@@ -56,7 +57,7 @@ pub mod deposit {
         let deposit_account = &mut ctx.accounts.vault;
         let owner_main_account = &mut ctx.accounts.owner;
         
-        require!(withdraw_amount <= deposit_account.balance, DepositError::InsufficientFunds);
+        require!(withdraw_amount <= deposit_account.balance, BankError::InsufficientFunds);
 
         let ix = anchor_lang::solana_program::system_instruction::transfer(
             &deposit_account.key(),
@@ -122,7 +123,6 @@ pub struct Transfer<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     #[account(
-        // TO DO CONSTRAINT .owner = initializer
         mut,
         seeds=[b"vault".as_ref(), owner.key().as_ref()], 
         bump
@@ -186,7 +186,9 @@ impl Vault {
 }
 
 #[error_code]
-pub enum DepositError {
+pub enum BankError {
     #[msg("Trying to withdraw more funds than in the account")]
-    InsufficientFunds
+    InsufficientFunds,
+    #[msg("You are not authorized to perform this action.")]
+    Unauthorized,
 }
