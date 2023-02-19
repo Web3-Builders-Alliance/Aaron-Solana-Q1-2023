@@ -2,10 +2,12 @@ pub mod state;
 pub mod constants;
 pub mod instructions;
 pub mod model;
+pub mod id;
 
 use anchor_lang::prelude::*;
 use instructions::*;
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+
+pub use id::ID;
 
 #[program]
 pub mod bootstrap_template {
